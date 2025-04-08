@@ -43,6 +43,7 @@ public class SubscriberConfiguration {
         jedisPoolConfig.setTestOnReturn(true);
         jedisPoolConfig.setTestWhileIdle(true);
         jedisPoolConfig.setBlockWhenExhausted(true);
+        jedisPoolConfig.setJmxEnabled(false);
         return new JedisPool(jedisPoolConfig, host, port);
     }
 }
