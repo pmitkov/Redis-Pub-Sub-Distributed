@@ -5,6 +5,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -21,7 +22,7 @@ public class BootstrapApplication {
     private final ChannelProperties channelProperties;
     private final TelemetryService telemetryService;
     private final ObjectMapper objectMapper;
-    private final TaskExecutor taskExecutor;
+    private final ThreadPoolTaskExecutor taskExecutor;
     private final long subscriberId;
 
     public BootstrapApplication(SubscriberGroupService subscriberGroupService,
@@ -29,7 +30,7 @@ public class BootstrapApplication {
                                 ChannelProperties channelProperties,
                                 TelemetryService telemetryService,
                                 ObjectMapper objectMapper,
-                                TaskExecutor taskExecutor,
+                                ThreadPoolTaskExecutor taskExecutor,
                                 long subscriberId) {
         this.subscriberGroupService = subscriberGroupService;
         this.jedisPool = jedisPool;
