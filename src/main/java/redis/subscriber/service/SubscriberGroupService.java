@@ -2,9 +2,6 @@ package redis.subscriber.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.ContextClosedEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
@@ -17,11 +14,11 @@ import redis.telemetry.TelemetryService;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Random;
+
+import static redis.ApplicationConfiguration.UNIVERSE_SIZE;
 
 @Service
 public class SubscriberGroupService {
-    private static final long UNIVERSE_SIZE = Integer.MAX_VALUE;
     private static final String KEY_PREFIX = "ABRACADABRA_";
 
     private final CircularDHT circularDHT = new TreeSetCircularDHT(UNIVERSE_SIZE);
@@ -36,13 +33,14 @@ public class SubscriberGroupService {
 
     public SubscriberGroupService(@Value("${redis.keep-alive-timeout.ms}") long keepAliveTimeout,
                                   JedisPool jedisPool,
+                                  long subscriberId,
                                   ChannelProperties channelProperties,
                                   ThreadPoolTaskExecutor taskExecutor,
                                   TelemetryService telemetryService,
                                   ObjectMapper objectMapper) {
         this.keepAliveTimeout = keepAliveTimeout;
         this.jedisPool = jedisPool;
-        this.subscriberId = Math.abs((new Random()).nextLong()) % UNIVERSE_SIZE;
+        this.subscriberId = subscriberId;
         this.channelProperties = channelProperties;
         this.taskExecutor = taskExecutor;
         this.telemetryService = telemetryService;
@@ -74,23 +72,5 @@ public class SubscriberGroupService {
 
     public boolean isProcessedBySubscriber(long message) {
         return circularDHT.getNearest(message % UNIVERSE_SIZE) == subscriberId;
-    }
-
-    @EventListener(ApplicationReadyEvent.class)
-    public void onStartup() {
-        try (Jedis jedis = jedisPool.getResource()) {
-            jedis.lpush(channelProperties.listName(), Long.toString(subscriberId));
-        }
-        sendKeepAliveHeartBeat();
-        updateAliveWorkers();
-        taskExecutor.execute(new SubscriberWorker(Long.toString(subscriberId),
-                jedisPool, channelProperties, telemetryService, objectMapper, this));
-    }
-
-    @EventListener(ContextClosedEvent.class)
-    public void onShutdown() {
-        try (Jedis jedis = jedisPool.getResource()) {
-            jedis.lrem(channelProperties.listName(), 1, Long.toString(subscriberId));
-        }
     }
 }
