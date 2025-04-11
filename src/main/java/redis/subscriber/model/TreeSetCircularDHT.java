@@ -2,12 +2,6 @@ package redis.subscriber.model;
 
 import java.util.*;
 
-/**
- * A simple circular DHT data structure with similar structure as in
- * 'Computer Networking A Top-Down Approach 6th Edition p.177'
- * Both adding value and getting the nearest value(left nearest value in case of tiebreaker)
- * are performed in O(lgn) time, where n is the size of the set.
- */
 public class TreeSetCircularDHT implements CircularDHT {
 
     private final TreeSet<Long> values;
@@ -89,7 +83,53 @@ public class TreeSetCircularDHT implements CircularDHT {
     }
 
     @Override
+    public Set<Long> getKNearest(long value, int k) {
+        if (k > values.size()) {
+            throw new IllegalArgumentException("K must be <= size of container");
+        }
+        long prev = values.contains(value) ? value : getPrev(value);
+        long next = getNext(value);
+        Set<Long> result = new HashSet<>();
+        while (k > 0) {
+            if (getDistance(prev, value) <= getDistance(next, value)) {
+                result.add(prev);
+                prev = getPrev(prev);
+            } else {
+                result.add(next);
+                next = getNext(next);
+            }
+            k--;
+        }
+        return result;
+    }
+
+    @Override
     public List<Long> getValues() {
         return new ArrayList<>(values);
+    }
+
+    private long getPrev(long value) {
+        Long prev = values.lower(value);
+        if (prev != null) {
+            return prev;
+        }
+        return values.last();
+    }
+
+    private long getNext(long value) {
+        Long next = values.higher(value);
+        if (next != null) {
+            return next;
+        }
+        return values.first();
+    }
+
+    private long getDistance(long value1, long value2) {
+        if (value1 > value2) {
+            long tmp = value1;
+            value1 = value2;
+            value2 = tmp;
+        }
+        return Math.min(value2 - value1, universeSize - value2 + value1);
     }
 }

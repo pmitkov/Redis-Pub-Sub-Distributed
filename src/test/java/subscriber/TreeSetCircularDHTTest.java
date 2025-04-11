@@ -59,4 +59,19 @@ public class TreeSetCircularDHTTest {
         assertThrows(IllegalArgumentException.class, () -> set.addValue(129));
         assertThrows(IllegalStateException.class, () -> set.getNearest(12L));
     }
+
+    @Test
+    public void testKNearest() {
+        TreeSetCircularDHT set = new TreeSetCircularDHT(128, List.of(4L, 10L, 15L, 24L, 25L, 30L));
+        assertThat(set.getKNearest(11L, 3)).containsOnly(4L, 10L, 15L);
+        assertThat(set.getKNearest(15L, 3)).containsOnly(10L, 15L, 24L);
+        assertThat(set.getKNearest(14L, 3)).containsOnly(4L, 10L, 15L);
+        assertThat(set.getKNearest(127L, 3)).containsOnly(4L, 10L, 15L);
+        for (int i = 0; i < 128; i++) {
+            assertThat(set.getKNearest(i, 1).stream().findFirst().get()).isEqualTo(set.getNearest(i));
+            assertThat(set.getKNearest(11L, 6)).containsOnly(4L, 10L, 15L, 24L, 25L, 30L);
+        }
+        set = new TreeSetCircularDHT(32, List.of(4L, 10L, 15L, 24L, 25L, 30L));
+        assertThat(set.getKNearest(4L, 3)).containsOnly(4L, 10L, 30L);
+    }
 }
