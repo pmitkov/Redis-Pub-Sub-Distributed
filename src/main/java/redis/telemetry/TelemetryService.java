@@ -11,6 +11,8 @@ import java.util.concurrent.TimeUnit;
 public class TelemetryService {
 
     private static final String METER = "MESSAGE_METER";
+    private static final String FAILED_METER = "MESSAGE_FAILED_METER";
+    private static final String NOT_PROCESSED_METER = "MESSAGE_NOT_PROCESSED_METER";
 
     private final MetricRegistry metricRegistry;
     private final ConsoleReporter reporter;
@@ -27,5 +29,13 @@ public class TelemetryService {
 
     public void messageProcessed() {
         metricRegistry.meter(METER).mark();
+    }
+
+    public void messageFailedLock() {
+        metricRegistry.meter(FAILED_METER).mark();
+    }
+
+    public void messageNotProcessed() {
+        metricRegistry.meter(NOT_PROCESSED_METER).mark();
     }
 }

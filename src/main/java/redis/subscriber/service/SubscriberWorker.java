@@ -64,6 +64,7 @@ public class SubscriberWorker extends JedisPubSub implements Runnable {
         try {
             Message msg = objectMapper.readValue(message, Message.class);
             if (!subscriberGroupService.isProcessedBySubscriber(Math.abs(HashUtils.getHash(msg.getMessageId())))) {
+                telemetryService.messageNotProcessed();
                 return;
             }
             msg.setComputedValue(CPUTaskStub.calculatePi((int)(Math.random() * 11) + 39));

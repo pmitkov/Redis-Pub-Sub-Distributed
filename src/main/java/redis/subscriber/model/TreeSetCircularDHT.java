@@ -84,9 +84,7 @@ public class TreeSetCircularDHT implements CircularDHT {
 
     @Override
     public Set<Long> getKNearest(long value, int k) {
-        if (k > values.size()) {
-            throw new IllegalArgumentException("K must be <= size of container");
-        }
+        k = Math.min(k, values.size());
         long prev = values.contains(value) ? value : getPrev(value);
         long next = getNext(value);
         Set<Long> result = new HashSet<>();
