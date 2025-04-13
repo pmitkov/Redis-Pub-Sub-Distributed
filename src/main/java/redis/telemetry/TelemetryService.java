@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import redis.clients.jedis.ConnectionPoolConfig;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisPooled;
-import redis.clients.jedis.timeseries.TSAlterParams;
+import redis.clients.jedis.timeseries.TSCreateParams;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -55,7 +55,7 @@ public class TelemetryService {
         metricRegistry.meter(NOT_PROCESSED_METER).mark();
     }
 
-    @Scheduled(fixedRateString = "${telemetry.poll.interval.ms}")
+    @Scheduled(fixedRateString = "${telemetry.poll.interval.ms}", initialDelayString = "${telemetry.poll.interval.ms}")
     public void reportTelemetry() {
         addTS(getProcessedTSName(), System.currentTimeMillis(), metricRegistry.meter(PROCESSED_METER).getCount());
         addTS(getFailedLockTSName(), System.currentTimeMillis(), metricRegistry.meter(FAILED_METER).getCount());
@@ -77,10 +77,10 @@ public class TelemetryService {
         return NOT_PROCESSED_METER + ":" + subscriberId;
     }
 
-    public void alterTS(String key, long retentionMS, Map<String, String> labels) {
+    public void createTS(String key, long retentionMS, Map<String, String> labels) {
         JedisPooled jedis = new JedisPooled(poolConfig, hostAndPort.getHost(), hostAndPort.getPort());
-        jedis.tsAlter(key, TSAlterParams
-                .alterParams()
+        jedis.tsCreate(key, TSCreateParams
+                .createParams()
                 .retention(retentionMS)
                 .labels(labels));
     }

@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-pub-sub
+  labels:
+    app: redis-pub-sub
+spec:
+  replicas: 8
+  selector:
+    matchLabels:
+      app: redis-pub-sub
+  template:
+    metadata:
+      labels:
+        app: redis-pub-sub
+    spec:
+      containers:
+        - name: springboot-container
+          image: redis-pub-sub:latest
+          resources:
+            limits:
+              memory: "2048Mi"
+              cpu: "500m"
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+          imagePullPolicy: IfNotPresent

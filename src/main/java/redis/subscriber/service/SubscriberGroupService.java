@@ -1,5 +1,7 @@
 package redis.subscriber.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,8 @@ import static redis.ApplicationConfiguration.UNIVERSE_SIZE;
 @Service
 public class SubscriberGroupService {
 
+    private static final Logger LOG = LoggerFactory.getLogger(SubscriberGroupService.class);
+
     private static final String SUBSCRIBER_KEY_PREFIX = "ABRACADABRA_";
     private static final String MESSAGE_KEY_PREFIX = "LockMessage";
 
@@ -31,8 +35,6 @@ public class SubscriberGroupService {
     private final int workerReplicas;
     private final ChannelProperties channelProperties;
     private final TelemetryService telemetryService;
-    private boolean registered = false;
-
 
     public SubscriberGroupService(ConnectionPoolConfig poolConfig,
                                   HostAndPort hostAndPort,
@@ -60,21 +62,21 @@ public class SubscriberGroupService {
 
     @Scheduled(fixedRateString = "${redis.keep-alive-timeout.ms}", initialDelayString = "${redis.keep-alive-timeout.ms}")
     public void updateAliveWorkers() {
-        registered = true;
         JedisPooled jedis = new JedisPooled(poolConfig, hostAndPort.getHost(), hostAndPort.getPort());
         List<String> registered = jedis.lrange(channelProperties.listName(), 0, -1);
         for (String worker : registered) {
             if (jedis.get(SUBSCRIBER_KEY_PREFIX + worker) != null) {
+                LOG.debug("Adding worker {}", worker);
                 circularDHT.addValue(Long.parseLong(worker));
             } else {
+                LOG.debug("Removing worker {}", worker);
                 circularDHT.removeValue(Long.parseLong(worker));
             }
         }
     }
 
     public boolean isProcessedBySubscriber(long message) {
-        return registered &&
-                circularDHT.getKNearest(message % UNIVERSE_SIZE, workerReplicas).contains(subscriberId) &&
+        return circularDHT.getKNearest(message % UNIVERSE_SIZE, workerReplicas).contains(subscriberId) &&
                 tryToAcquireLock(message);
     }
 

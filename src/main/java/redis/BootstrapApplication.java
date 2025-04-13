@@ -65,19 +65,20 @@ public class BootstrapApplication {
 
     @EventListener(ApplicationReadyEvent.class)
     public void onStartup() {
+        LOG.info("Starting up...");
         JedisPooled jedis = new JedisPooled(poolConfig, hostAndPort.getHost(), hostAndPort.getPort());
         jedis.lpush(channelProperties.listName(), Long.toString(subscriberId));
 
         subscriberGroupService.sendKeepAliveHeartBeat();
         subscriberGroupService.updateAliveWorkers();
 
-        telemetryService.alterTS(telemetryService.getProcessedTSName(), retentionTime,
+        telemetryService.createTS(telemetryService.getProcessedTSName(), retentionTime,
                 Map.ofEntries(entry(subscriberLabel, Long.toString(subscriberId)),
                         entry(metricLabel, TelemetryService.PROCESSED_METER)));
-        telemetryService.alterTS(telemetryService.getFailedLockTSName(), retentionTime,
+        telemetryService.createTS(telemetryService.getFailedLockTSName(), retentionTime,
                 Map.ofEntries(entry(subscriberLabel, Long.toString(subscriberId)),
                         entry(metricLabel, TelemetryService.FAILED_METER)));
-        telemetryService.alterTS(telemetryService.getNotProcessedTSName(), retentionTime,
+        telemetryService.createTS(telemetryService.getNotProcessedTSName(), retentionTime,
                 Map.ofEntries(entry(subscriberLabel, Long.toString(subscriberId)),
                         entry(metricLabel, TelemetryService.NOT_PROCESSED_METER)));
 
@@ -88,6 +89,7 @@ public class BootstrapApplication {
 
     @EventListener(ContextClosedEvent.class)
     public void onShutdown() {
+        LOG.info("Shutting down...");
         JedisPooled jedis = new JedisPooled(poolConfig, hostAndPort.getHost(), hostAndPort.getPort());
         jedis.lrem(channelProperties.listName(), 1, Long.toString(subscriberId));
     }
