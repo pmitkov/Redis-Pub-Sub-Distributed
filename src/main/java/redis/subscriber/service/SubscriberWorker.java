@@ -5,8 +5,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.ConnectionPoolConfig;
+import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.JedisPooled;
 import redis.clients.jedis.JedisPubSub;
 import redis.clients.jedis.params.XAddParams;
 import redis.subscriber.CPUTaskStub;
@@ -22,20 +23,23 @@ public class SubscriberWorker extends JedisPubSub implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(SubscriberWorker.class);
 
     private final String id;
-    private final JedisPool jedisPool;
+    private final ConnectionPoolConfig poolConfig;
+    private final HostAndPort hostAndPort;
     private final ChannelProperties channelProperties;
     private final TelemetryService telemetryService;
     private final ObjectMapper objectMapper;
     private final SubscriberGroupService subscriberGroupService;
 
     public SubscriberWorker(String id,
-                            JedisPool jedisPool,
+                            ConnectionPoolConfig poolConfig,
+                            HostAndPort hostAndPort,
                             ChannelProperties channelProperties,
                             TelemetryService telemetryService,
                             ObjectMapper objectMapper,
                             SubscriberGroupService subscriberGroupService) {
         this.id = id;
-        this.jedisPool = jedisPool;
+        this.poolConfig = poolConfig;
+        this.hostAndPort = hostAndPort;
         this.channelProperties = channelProperties;
         this.telemetryService = telemetryService;
         this.objectMapper = objectMapper;
@@ -44,9 +48,8 @@ public class SubscriberWorker extends JedisPubSub implements Runnable {
 
     @Override
     public void run() {
-        try (Jedis jedis = jedisPool.getResource()) {
-            jedis.subscribe(this, channelProperties.messageChannelName());
-        }
+        JedisPooled jedis = new JedisPooled(poolConfig, hostAndPort.getHost(), hostAndPort.getPort());
+        jedis.subscribe(this, channelProperties.messageChannelName());
     }
 
     @Override
@@ -69,10 +72,9 @@ public class SubscriberWorker extends JedisPubSub implements Runnable {
             }
             msg.setComputedValue(CPUTaskStub.calculatePi((int)(Math.random() * 11) + 39));
             msg.setConsumerId(id);
-            try (Jedis conn = jedisPool.getResource()) {
-                Map<String,String> msgToWrite = objectMapper.convertValue(msg, new TypeReference<>() {});
-                conn.xadd(channelProperties.streamName(), msgToWrite, new XAddParams());
-            }
+            JedisPooled jedis = new JedisPooled(poolConfig, hostAndPort.getHost(), hostAndPort.getPort());
+            Map<String,String> msgToWrite = objectMapper.convertValue(msg, new TypeReference<>() {});
+            jedis.xadd(channelProperties.streamName(), msgToWrite, new XAddParams());
             telemetryService.messageProcessed();
         } catch (JsonProcessingException e) {
             LOG.error("Unable to parse message: {}", e.getMessage());
