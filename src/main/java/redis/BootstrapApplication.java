@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import redis.clients.jedis.ConnectionPoolConfig;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisPooled;
-import redis.clients.jedis.exceptions.JedisDataException;
 import redis.subscriber.model.ChannelProperties;
 import redis.subscriber.service.SubscriberGroupService;
 import redis.subscriber.service.SubscriberWorker;
@@ -72,19 +71,15 @@ public class BootstrapApplication {
         subscriberGroupService.sendKeepAliveHeartBeat();
         subscriberGroupService.updateAliveWorkers();
 
-        try {
-            telemetryService.createTS(telemetryService.getProcessedTSName(), retentionTime,
-                    Map.ofEntries(entry(subscriberLabel, Long.toString(subscriberId)),
-                            entry(metricLabel, TelemetryService.PROCESSED_METER)));
-            telemetryService.createTS(telemetryService.getFailedLockTSName(), retentionTime,
-                    Map.ofEntries(entry(subscriberLabel, Long.toString(subscriberId)),
-                            entry(metricLabel, TelemetryService.FAILED_METER)));
-            telemetryService.createTS(telemetryService.getNotProcessedTSName(), retentionTime,
-                    Map.ofEntries(entry(subscriberLabel, Long.toString(subscriberId)),
-                            entry(metricLabel, TelemetryService.NOT_PROCESSED_METER)));
-        } catch (JedisDataException e) {
-            LOG.info("RTS creation failed. Reason: {}", e.getMessage());
-        }
+        telemetryService.alterTS(telemetryService.getProcessedTSName(), retentionTime,
+                Map.ofEntries(entry(subscriberLabel, Long.toString(subscriberId)),
+                        entry(metricLabel, TelemetryService.PROCESSED_METER)));
+        telemetryService.alterTS(telemetryService.getFailedLockTSName(), retentionTime,
+                Map.ofEntries(entry(subscriberLabel, Long.toString(subscriberId)),
+                        entry(metricLabel, TelemetryService.FAILED_METER)));
+        telemetryService.alterTS(telemetryService.getNotProcessedTSName(), retentionTime,
+                Map.ofEntries(entry(subscriberLabel, Long.toString(subscriberId)),
+                        entry(metricLabel, TelemetryService.NOT_PROCESSED_METER)));
 
 
         taskExecutor.execute(new SubscriberWorker(Long.toString(subscriberId),

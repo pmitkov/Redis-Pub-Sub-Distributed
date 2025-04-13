@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import redis.clients.jedis.ConnectionPoolConfig;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisPooled;
-import redis.clients.jedis.timeseries.TSCreateParams;
+import redis.clients.jedis.timeseries.TSAlterParams;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -77,10 +77,10 @@ public class TelemetryService {
         return NOT_PROCESSED_METER + ":" + subscriberId;
     }
 
-    public void createTS(String key, long retentionMS, Map<String, String> labels) {
+    public void alterTS(String key, long retentionMS, Map<String, String> labels) {
         JedisPooled jedis = new JedisPooled(poolConfig, hostAndPort.getHost(), hostAndPort.getPort());
-        jedis.tsCreate(key, TSCreateParams
-                .createParams()
+        jedis.tsAlter(key, TSAlterParams
+                .alterParams()
                 .retention(retentionMS)
                 .labels(labels));
     }
